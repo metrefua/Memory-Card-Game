@@ -73,4 +73,112 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [cards])
 
+function handleCardClick(id) {
+    if (gameStatus !== 'playing') return
+
+    if (clickedIds.includes(id)) {
+      // Already clicked this round — game over.
+      if (score > bestScore) {
+        setBestScore(score)
+        localStorage.setItem(BEST_SCORE_KEY, String(score))
+      }
+      setGameStatus('lost')
+      setJustLost(true)
+      setTimeout(() => setJustLost(false), 500)
+      return
+    }
+
+    // New card — score, remember it, and shuffle for the next click.
+    const newScore = score + 1
+    setScore(newScore)
+    setClickedIds((prev) => [...prev, id])
+    setCards((prev) => shuffle(prev))
+
+    if (newScore === cards.length) {
+      setGameStatus('won')
+      if (newScore > bestScore) {
+        setBestScore(newScore)
+        localStorage.setItem(BEST_SCORE_KEY, String(newScore))
+      }
+    }
+  }
+
+  function handleDifficultyChange(nextDifficulty) {
+    if (nextDifficulty === difficulty) return
+    setDifficulty(nextDifficulty)
+  }
+
+  function handlePlayAgain() {
+    // Re-running the fetch effect gives a brand new deck for the next round.
+    // Toggling difficulty to itself won't re-trigger the effect, so refetch directly.
+    setGameStatus('playing')
+    refetchDeck()
+  }
+
+  async function refetchDeck() {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const ids = getRandomIds(DIFFICULTIES[difficulty].count)
+      const promises = ids.map(async (id) => {
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch Pokemon #${id}`)
+        }
+        const data = await response.json()
+        return {
+          id: data.id,
+          name: data.name,
+          image: data.sprites.other['official-artwork'].front_default,
+        }
+      })
+      const pokemon = await Promise.all(promises)
+      setCards(shuffle(pokemon))
+      setClickedIds([])
+      setScore(0)
+    } catch (err) {
+      console.error('Failed to load Pokemon:', err)
+      setError("Couldn't load the deck. Check your connection and try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="app">
+      <Header
+        score={score}
+        bestScore={bestScore}
+        totalCards={cards.length}
+        clickedCount={clickedIds.length}
+        justLost={justLost}
+      />
+
+      <DifficultySelector
+        difficulty={difficulty}
+        onChange={handleDifficultyChange}
+        disabled={isLoading}
+      />
+
+      {error && <div className="error-banner">{error}</div>}
+
+      {isLoading ? (
+        <div className="loading">
+          <div className="pokeball-spinner" aria-hidden="true" />
+          <p>Catching {DIFFICULTIES[difficulty].count} Pokémon…</p>
+        </div>
+      ) : (
+        !error && (
+          <GameBoard cards={cards} onCardClick={handleCardClick} isShuffling={isShuffling} />
+        )
+      )}
+
+      {gameStatus === 'lost' && (
+        <GameOverModal score={score} bestScore={bestScore} onPlayAgain={handlePlayAgain} />
+      )}
+      {gameStatus === 'won' && (
+        <WinModal score={score} bestScore={bestScore} onPlayAgain={handlePlayAgain} />
+      )}
+    </div>
+  )
 }
