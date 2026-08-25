@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import Header from './components/Header.jsx'
-import DifficultySelector, { DIFFICULTIES } from './components/DifficultySelector.jsx'
-import GameBoard from './components/GameBoard.jsx'
-import GameOverModal from './components/GameOverModal.jsx'
-import WinModal from './components/WinModal.jsx'
+import Header from './component/Header.jsx'
+import DifficultySelector, { DIFFICULTIES } from './component/DifficultySelector.jsx'
+import GameBoard from './component/GameBoard.jsx'
+import GameOverModal from './component/GameOverModal.jsx'
+import WinModal from './component/WinModal.jsx'
 import { shuffle, getRandomIds } from './gameUtils.js'
 
 const BEST_SCORE_KEY = 'pokememory-best-score'
@@ -144,34 +144,68 @@ function handleCardClick(id) {
     }
   }
 
+  const statusKey = error
+    ? 'error'
+    : isLoading
+    ? 'loading'
+    : gameStatus === 'lost'
+    ? 'gameover'
+    : gameStatus === 'won'
+    ? 'won'
+    : 'playing'
+
+  const statusLabel = {
+    loading: 'Loading',
+    playing: 'Playing',
+    gameover: 'Game Over',
+    won: 'You Win',
+    error: 'Error',
+  }[statusKey]
+
   return (
     <div className="app">
-      <Header
-        score={score}
-        bestScore={bestScore}
-        totalCards={cards.length}
-        clickedCount={clickedIds.length}
-        justLost={justLost}
-      />
-
-      <DifficultySelector
-        difficulty={difficulty}
-        onChange={handleDifficultyChange}
-        disabled={isLoading}
-      />
-
-      {error && <div className="error-banner">{error}</div>}
-
-      {isLoading ? (
-        <div className="loading">
-          <div className="pokeball-spinner" aria-hidden="true" />
-          <p>Catching {DIFFICULTIES[difficulty].count} Pokémon…</p>
+      <div className="pokedex-shell">
+        <div className="pokedex-lights">
+          <span className={`status-light status-light--${statusKey}`} aria-hidden="true" />
+          <span className="status-text">{statusLabel}</span>
         </div>
-      ) : (
-        !error && (
-          <GameBoard cards={cards} onCardClick={handleCardClick} isShuffling={isShuffling} />
-        )
-      )}
+
+        <div className="pokedex-screen">
+          <Header
+            score={score}
+            bestScore={bestScore}
+            totalCards={cards.length}
+            clickedCount={clickedIds.length}
+            justLost={justLost}
+          />
+
+          <DifficultySelector
+            difficulty={difficulty}
+            onChange={handleDifficultyChange}
+            disabled={isLoading}
+          />
+
+          {error && (
+            <div className="error-banner">
+              <p>{error}</p>
+              <button type="button" className="modal__btn" onClick={refetchDeck}>
+                Try again
+              </button>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="loading">
+              <div className="pokeball-spinner" aria-hidden="true" />
+              <p>Catching {DIFFICULTIES[difficulty].count} Pokémon…</p>
+            </div>
+          ) : (
+            !error && (
+              <GameBoard cards={cards} onCardClick={handleCardClick} isShuffling={isShuffling} />
+            )
+          )}
+        </div>
+      </div>
 
       {gameStatus === 'lost' && (
         <GameOverModal score={score} bestScore={bestScore} onPlayAgain={handlePlayAgain} />
