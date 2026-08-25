@@ -63,7 +63,7 @@ body {
 
 .app {
   width: 100%;
-  max-width: 960px;
+  max-width: 700px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -262,7 +262,7 @@ body {
 
 .game-board {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   width: 100%;
   transition: opacity 0.22s ease, transform 0.22s ease;
